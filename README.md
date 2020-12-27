@@ -29,7 +29,6 @@ Download [discrete_distribution.hpp][hpp] and include in your program. The
 library is single header-only and has zero dependency.
 
 ```c++
-#include <random>
 #include <discrete_distribution.hpp>
 
 int main()
@@ -40,6 +39,12 @@ int main()
 
     // 0, 1, 2 or 3 is chosen.
     std::size_t choice = distr(random);
+
+    // Change the weight of the event 1 to zero.
+    distr.update(1, 0.0);
+
+    // Now event 1 will not be chosen because it has zero weight.
+    choice = distr(random);
 }
 ```
 
