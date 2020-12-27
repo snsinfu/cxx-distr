@@ -56,6 +56,13 @@ cd cxx-distr/test
 make
 ```
 
+Also you can test example program:
+
+```sh
+cd cxx-distr/example
+make -C gillespie
+```
+
 
 ## Project Status
 
