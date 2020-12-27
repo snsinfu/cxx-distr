@@ -213,18 +213,6 @@ TEST_CASE("discrete_weights::find - finds the correct event after weight update"
 }
 
 
-TEST_CASE("discrete_weights - is serializable")
-{
-    cxx::discrete_weights const weights = {1.2, 3.4, 5.6};
-    std::string const expected_form = "3 1.2 3.4 5.6";
-
-    std::ostringstream ss;
-    ss << weights;
-
-    CHECK(ss.str() == expected_form);
-}
-
-
 TEST_CASE("discrete_weights - is deserializable")
 {
     std::string const source_form = "3 1.2 3.4 5.6";
@@ -234,6 +222,31 @@ TEST_CASE("discrete_weights - is deserializable")
     std::istringstream ss{source_form};
     ss >> weights;
 
-    std::vector<double> const actual_values{weights.begin(), weights.end()};
-    CHECK(actual_values == expected_values);
+    // We do not test for exact accuracy.
+    CHECK(weights.size() == expected_values.size());
+
+    for (std::size_t i = 0; i < expected_values.size(); i++) {
+        CHECK(weights[i] == Approx(expected_values[i]));
+    }
+}
+
+
+TEST_CASE("discrete_weights - is serializable")
+{
+    // Serialization result is indirectly tested via roundtrip because we
+    // cannot be sure how parameters are serialized exactly.
+    cxx::discrete_weights const origin = {1.2, 3.4, 5.6};
+    cxx::discrete_weights roundtrip;
+
+    std::ostringstream os;
+    os << origin;
+    std::istringstream is{os.str()};
+    is >> roundtrip;
+
+    // We do not test for exact accuracy.
+    CHECK(roundtrip.size() == origin.size());
+
+    for (std::size_t i = 0; i < origin.size(); i++) {
+        CHECK(roundtrip[i] == Approx(origin[i]));
+    }
 }
