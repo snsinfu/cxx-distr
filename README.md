@@ -1,4 +1,4 @@
-# Efficient discrete distribution for C++ &lt;random&gt;
+# Efficient discrete random distribution for C++
 
 [![Test Status][test-badge]][test-url]
 [![Boost License][license-badge]](LICENSE.txt)
@@ -17,9 +17,33 @@ Carlo][kmc] and [Gillespie algorithm][gillespie].
 [cxx-badge]: https://img.shields.io/badge/C%2B%2B-11%2F14%2F17%2F20-orange.svg
 [license-badge]: https://img.shields.io/badge/license-Boost-blue.svg
 
+- [Usage](#usage)
 - [Testing](#testing)
 - [Project Status](#project-status)
 - [License](#license)
+
+
+## Usage
+
+Download [discrete_distribution.hpp][hpp] and include in your program. The
+library is single header-only and has zero dependency.
+
+```c++
+#include <random>
+#include <discrete_distribution.hpp>
+
+int main()
+{
+    // Distribution of four events with these weights.
+    cxx::discrete_distribution distr = {1.2, 3.4, 5.6, 7.8};
+    std::mt19937_64 random;
+
+    // 0, 1, 2 or 3 is chosen.
+    std::size_t choice = distr(random);
+}
+```
+
+[hpp]: https://github.com/snsinfu/cxx-distr/raw/master/include/discrete_distribution.hpp
 
 
 ## Testing
