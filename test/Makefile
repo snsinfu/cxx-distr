@@ -29,8 +29,7 @@ ARTIFACTS = \
 OBJECTS = \
   main.o \
   test_discrete_distribution.o \
-  test_discrete_weights.o \
-  test_weight_tree.o
+  test_discrete_weights.o
 
 DEPENDS = \
   ../include/discrete_distribution.hpp
@@ -53,4 +52,3 @@ main: $(OBJECTS)
 
 test_discrete_distribution.o: test_discrete_distribution.cc $(DEPENDS)
 test_discrete_weights.o: test_discrete_weights.cc $(DEPENDS)
-test_weight_tree.o: test_weight_tree.cc $(DEPENDS)

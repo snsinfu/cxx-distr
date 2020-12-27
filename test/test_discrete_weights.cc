@@ -2,6 +2,7 @@
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 
+#include <algorithm>
 #include <initializer_list>
 #include <numeric>
 #include <sstream>
@@ -11,35 +12,23 @@
 #include <discrete_distribution.hpp>
 
 
-TEST_CASE("discrete_weights - is constructible from a vector")
+TEST_CASE("discrete_weights - is default constructible")
 {
-    std::vector<double> weight_values = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
-    cxx::discrete_weights weights{weight_values};
-
-    SECTION("attributes are correct")
-    {
-        auto const expected_sum = std::accumulate(
-            weight_values.begin(), weight_values.end(), 0.0
-        );
-        CHECK(weights.sum() == expected_sum);
-        CHECK(weights.weights() == weight_values);
-    }
+    cxx::discrete_weights weights;
+    (void) weights;
 }
 
 
-TEST_CASE("discrete_weights - is constructible from an initializer list")
+TEST_CASE("discrete_weights - is constructible from weights")
 {
-    std::initializer_list<double> weight_values = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
-    cxx::discrete_weights weights = weight_values;
+    // Vector
+    std::vector<double> const values = {1.0, 2.0, 3.0};
+    cxx::discrete_weights weights_v{values};
+    (void) weights_v;
 
-    SECTION("attributes are correct")
-    {
-        auto const expected_sum = std::accumulate(
-            weight_values.begin(), weight_values.end(), 0.0
-        );
-        CHECK(weights.sum() == expected_sum);
-        CHECK(weights.weights() == std::vector<double>(weight_values));
-    }
+    // Initializer list
+    cxx::discrete_weights weights_i = {1.0, 2.0, 3.0};
+    (void) weights_i;
 }
 
 
@@ -59,10 +48,10 @@ TEST_CASE("discrete_weights - is equality comparable")
 }
 
 
-TEST_CASE("discrete_weights - is default/copy constructible")
+TEST_CASE("discrete_weights - is copyable")
 {
-    cxx::discrete_weights const origin = {1.0, 2.0, 3.0};
-    cxx::discrete_weights const clone = origin;
+    cxx::discrete_weights origin = {1.0, 2.0, 3.0};
+    cxx::discrete_weights clone = origin;
     cxx::discrete_weights weights;
 
     weights = origin;
@@ -72,23 +61,155 @@ TEST_CASE("discrete_weights - is default/copy constructible")
 }
 
 
-TEST_CASE("discrete_weights::sum - returns the sum")
+TEST_CASE("discrete_weights::size - is the number of events")
 {
-    cxx::discrete_weights const weights = {1.2, 3.4, 5.6};
+    cxx::discrete_weights weights1 = {1.0};
+    cxx::discrete_weights weights2 = {1.0, 2.0};
+    cxx::discrete_weights weights3 = {1.0, 2.0, 3.0};
 
-    CHECK(weights.sum() == Approx(1.2 + 3.4 + 5.6));
+    CHECK(weights1.size() == 1);
+    CHECK(weights2.size() == 2);
+    CHECK(weights3.size() == 3);
 }
 
 
-TEST_CASE("discrete_weights::weights - returns a vector of weight values")
+TEST_CASE("discrete_weights::data - points to the weight values")
 {
-    cxx::discrete_weights const weights = {1.2, 3.4, 5.6};
+    cxx::discrete_weights const weights = {1.0, 2.0, 3.0};
 
-    std::vector<double> weight_values = weights.weights();
-    CHECK(weight_values.size() == 3);
-    CHECK(weight_values[0] == 1.2);
-    CHECK(weight_values[1] == 3.4);
-    CHECK(weight_values[2] == 5.6);
+    double const* values = weights.data();
+    CHECK(values[0] == 1.0);
+    CHECK(values[1] == 2.0);
+    CHECK(values[2] == 3.0);
+}
+
+
+TEST_CASE("discrete_weights::begin/end - contains the weight values")
+{
+    std::vector<double> const expected = {1.0, 2.0, 3.0};
+    cxx::discrete_weights const weights{expected};
+
+    std::vector<double> const values{weights.begin(), weights.end()};
+    CHECK(values == expected);
+}
+
+
+TEST_CASE("discrete_weights::operator[] - returns the weight of an event")
+{
+    cxx::discrete_weights const weights = {1.2, 3.4, 5.6, 7.8};
+
+    CHECK(weights[0] == 1.2);
+    CHECK(weights[1] == 3.4);
+    CHECK(weights[2] == 5.6);
+    CHECK(weights[3] == 7.8);
+}
+
+
+TEST_CASE("discrete_weights::sum - returns the sum of the weights")
+{
+    cxx::discrete_weights const weights1 = {1.0};
+    CHECK(weights1.sum() == Approx(1.0));
+
+    cxx::discrete_weights const weights2 = {1.0, 2.0};
+    CHECK(weights2.sum() == Approx(1.0 + 2.0));
+
+    cxx::discrete_weights const weights3 = {1.0, 2.0, 3.0};
+    CHECK(weights3.sum() == Approx(1.0 + 2.0 + 3.0));
+}
+
+
+TEST_CASE("discrete_weights::update - updates weight value")
+{
+    cxx::discrete_weights weights = {1.2, 3.4, 5.6};
+
+    auto const* data = weights.data();
+    REQUIRE(data[0] == 1.2);
+    REQUIRE(data[1] == 3.4);
+    REQUIRE(data[2] == 5.6);
+    REQUIRE(weights.sum() == Approx(1.2 + 3.4 + 5.6));
+
+    weights.update(1, 2.3);
+    weights.update(2, 3.4);
+
+    // Weight is actually updated in-place.
+    CHECK(data[0] == 1.2);
+    CHECK(data[1] == 2.3);
+    CHECK(data[2] == 3.4);
+
+    // Sum is also updated.
+    CHECK(weights.sum() == Approx(1.2 + 2.3 + 3.4));
+}
+
+
+TEST_CASE("discrete_weights::find - finds the correct leaf")
+{
+    // 0.0  1.0  2.0  3.0  4.0  5.0  6.0
+    // |----|---------|--------------|
+    // |___/|________/|_____________/
+    //   0      2            3
+    // Note: The element 1 has zero weight, so it won't be found.
+    cxx::discrete_weights const weights = {1.0, 0.0, 2.0, 3.0};
+
+    CHECK(weights.find(0.0) == 0);
+    CHECK(weights.find(0.5) == 0);
+    CHECK(weights.find(1.0) == 2);
+    CHECK(weights.find(1.5) == 2);
+    CHECK(weights.find(2.0) == 2);
+    CHECK(weights.find(2.5) == 2);
+    CHECK(weights.find(3.0) == 3);
+    CHECK(weights.find(3.5) == 3);
+    CHECK(weights.find(4.0) == 3);
+    CHECK(weights.find(4.5) == 3);
+    CHECK(weights.find(5.0) == 3);
+    CHECK(weights.find(5.5) == 3);
+}
+
+
+TEST_CASE("discrete_weights::find - returns edge element for overshoot probe")
+{
+    // Logically the probe should be in the half-open interval [0, S) where S
+    // is the sum of weights. But in practice numerical errors can result in
+    // undershoot or overshoot. Here we check robustness against such errors.
+    cxx::discrete_weights const weights = {1.0, 2.0, 3.0};
+
+    CHECK(weights.find(-0.1) == 0);
+    CHECK(weights.find(-0.0) == 0);
+    CHECK(weights.find(6.0) == 2);
+    CHECK(weights.find(6.1) == 2);
+}
+
+
+TEST_CASE("discrete_weights::find - finds the correct leaf after weight update")
+{
+    // 0.0  1.0  2.0  3.0  4.0  5.0  6.0
+    // |----|---------|--------------|
+    // |___/|________/|_____________/
+    //   0      2            3
+    cxx::discrete_weights weights = {1.0, 0.0, 2.0, 3.0};
+
+    REQUIRE(weights.find(2.5) == 2);
+    REQUIRE(weights.find(4.0) == 3);
+    REQUIRE(weights.find(5.5) == 3);
+
+    // 0.0  1.0  2.0  3.0  4.0  5.0  6.0  7.0  8.0
+    // |----|---------|---------|--------------|
+    // |___/|________/|________/|_____________/
+    //   0      1         2            3
+    weights.update(1, 2.0);
+
+    CHECK(weights.find(2.5) == 1);
+    CHECK(weights.find(4.0) == 2);
+    CHECK(weights.find(5.5) == 3);
+
+    // 0.0  1.0  2.0  3.0  4.0  5.0  6.0
+    // |----|---------|--------------|
+    // |___/|________/|_____________/
+    //   0      1            3
+    weights.update(2, 0.0);
+
+    CHECK(weights.find(2.5) == 1);
+    CHECK(weights.find(4.0) == 3);
+    CHECK(weights.find(5.5) == 3);
 }
 
 
@@ -103,20 +224,16 @@ TEST_CASE("discrete_weights - is serializable")
     CHECK(ss.str() == expected_form);
 }
 
+
 TEST_CASE("discrete_weights - is deserializable")
 {
     std::string const source_form = "3 1.2 3.4 5.6";
     std::vector<double> const expected_values = {1.2, 3.4, 5.6};
 
     cxx::discrete_weights weights;
-    std::istringstream ss(source_form);
+    std::istringstream ss{source_form};
     ss >> weights;
 
-    // Weight values may not exactly match due to numerical errors.
-    std::vector<double> const actual_values = weights.weights();
-
-    CHECK(actual_values.size() == expected_values.size());
-    CHECK(actual_values[0] == expected_values[0]);
-    CHECK(actual_values[1] == expected_values[1]);
-    CHECK(actual_values[2] == expected_values[2]);
+    std::vector<double> const actual_values{weights.begin(), weights.end()};
+    CHECK(actual_values == expected_values);
 }

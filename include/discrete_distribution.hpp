@@ -37,6 +37,7 @@
 //
 // See: https://github.com/snsinfu/cxx-distr/
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
@@ -55,260 +56,19 @@
 
 namespace cxx
 {
-    // WEIGHT TREE -----------------------------------------------------------
-
-    namespace distr_detail
-    {
-        using std::size_t;
-
-
-        /*
-         * A binary sum tree for storing weight values along with their sums.
-         */
-        class weight_tree
-        {
-        public:
-
-            /*
-             * Constructs an empty weight tree.
-             *
-             * The resulting object is only safe for copy and move assignment.
-             */
-            weight_tree() = default;
-
-
-            /*
-             * Constructs a weight tree from given weights.
-             *
-             * Params:
-             *   weights = Weight values of elements.
-             *
-             * Time complexity:
-             *   O(N) where N is the number of elements (= `weights.size()`).
-             */
-            explicit
-            weight_tree(std::vector<double> const& weights)
-            {
-                // We construct a complete binary tree in which the leaves
-                // contain the weights and internal nodes contain the sums of
-                // the weights of children.
-
-                // Determine the number of leaves.
-                size_t leaves = 1;
-
-                for (;;) {
-                    if (leaves >= weights.size()) {
-                        break;
-                    }
-                    leaves *= 2;
-                }
-
-                // We store the binary tree in an array just like commonly
-                // done in binary heaps.
-                _sumtree.resize(leaves * 2 - 1);
-                _leaves = leaves;
-                _elements = weights.size();
-                DISTR_ASSERT(_leaves >= _elements);
-
-                // Fill the leaves.
-                for (size_t i = 0; i < _elements; i++) {
-                    _sumtree[_leaves + i - 1] = weights[i];
-                }
-
-                // Then, fill internal nodes from leaves to the root. Recall
-                // that each node contains the sum of the weights of its
-                // children.
-                for (size_t layer = 1; ; layer++) {
-                    auto const layer_size = leaves >> layer;
-                    if (layer_size == 0) {
-                        break;
-                    }
-
-                    auto const start = layer_size - 1;
-                    auto const end = start + layer_size;
-
-                    DISTR_ASSERT(end < _leaves);
-                    DISTR_ASSERT(start < end);
-
-                    for (size_t node = start; node < end; node++) {
-                        auto const lchild = 2 * node + 1;
-                        auto const rchild = 2 * node + 2;
-                        _sumtree[node] = _sumtree[lchild] + _sumtree[rchild];
-                    }
-                }
-            }
-
-
-            /*
-             * Updates the weight of i-th element, propagating the change to
-             * internal and root nodes.
-             *
-             * Behavior is undefined if `i` is out of range or `weight` is
-             * negative or not finite. It is also undefined that the sum of
-             * weights overflow due to the update.
-             *
-             * Params:
-             *   i      = Index of the element to update weight.
-             *   weight = New weight value.
-             *
-             * Time complexity:
-             *   O(log N) where N is the number of elements.
-             */
-            void
-            update(size_t i, double weight)
-            {
-                DISTR_ASSERT(i < _elements);
-                DISTR_ASSERT(weight >= 0);
-
-                size_t node = _leaves + i - 1;
-                _sumtree[node] = weight;
-
-                do {
-                    node = (node - 1) / 2;
-                    auto const lchild = 2 * node + 1;
-                    auto const rchild = 2 * node + 2;
-                    _sumtree[node] = _sumtree[lchild] + _sumtree[rchild];
-                } while (node > 0);
-            }
-
-
-            /*
-             * Gets a pointer to the array containing weight values.
-             */
-            double const*
-            data() const
-            {
-                return _sumtree.data() + _leaves - 1;
-            }
-
-
-            /*
-             * Gets the number of elements.
-             */
-            size_t
-            size() const noexcept
-            {
-                return _elements;
-            }
-
-
-            /*
-             * Gets the total weight.
-             *
-             * Returns:
-             *   The sum of the weight values of all the elements stored.
-             *
-             * Time complexity: O(1).
-             */
-            double
-            sum() const noexcept
-            {
-                return _sumtree[0];
-            }
-
-
-            /*
-             * Finds the element whose cumulative weight range covers given
-             * probe value.
-             *
-             * Returns:
-             *   The index of the found element.
-             *
-             * Time complexity:
-             *   O(log N) where N is the number of elements.
-             */
-            size_t
-            find(double probe) const
-            {
-                size_t node = 0;
-
-                for (;;) {
-                    auto const lchild = 2 * node + 1;
-                    auto const rchild = 2 * node + 2;
-
-                    if (lchild >= _sumtree.size()) {
-                        break;
-                    }
-
-                    if (probe < _sumtree[lchild]) {
-                        node = lchild;
-                    } else {
-                        probe -= _sumtree[lchild];
-                        node = rchild;
-                    }
-                }
-
-                DISTR_ASSERT(node >= _leaves - 1);
-                DISTR_ASSERT(node < _sumtree.size());
-                size_t index = node - (_leaves - 1);
-
-                // Search may overshoot due to numerical errors.
-                if (index >= _elements) {
-                    index = _elements - 1;
-                }
-
-                return index;
-            }
-
-
-        private:
-            std::vector<double> _sumtree;
-            size_t _leaves = 0;
-            size_t _elements = 0;
-        };
-
-
-        /*
-         * Returns true if two weight trees hold exactly the same weights.
-         */
-        inline bool
-        operator==(
-            distr_detail::weight_tree const& w1,
-            distr_detail::weight_tree const& w2
-        )
-        {
-            if (w1.size() != w2.size()) {
-                return false;
-            }
-
-            auto const size = w1.size();
-            auto const weights1 = w1.data();
-            auto const weights2 = w2.data();
-
-            for (size_t i = 0; i < size; i++) {
-                if (weights1[i] != weights2[i]) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-
-        /*
-         * Returns true if two weight trees hold weights that differ in at
-         * least one element.
-         */
-        inline bool
-        operator!=(
-            distr_detail::weight_tree const& w1,
-            distr_detail::weight_tree const& w2
-        )
-        {
-            return !(w1 == w2);
-        }
-    }
-
-
     // WEIGHTS ---------------------------------------------------------------
 
     /*
-     * Class holding parameter set of `discrete_distribution`, namely, the
-     * probability weights of discrete events.
+     * Class holding the weights of a discrete distribution. It allows
+     * efficient reweighting and searching.
      */
     class discrete_weights
     {
     public:
+
+        using pointer = double const*;
+        using iterator = double const*;
+
 
         /*
          * Default constructor creates an empty object.
@@ -320,13 +80,65 @@ namespace cxx
          * Sets weight values from a vector.
          *
          * Params:
-         *   weights = Vector of weight values. The weights must be non-negative
-         *             finite numbers.
+         *   weights = Weight values. The weights must be non-negative finite
+         *             numbers.
+         *
+         * Time complexity:
+         *   O(N) where N is the number of events (= `weights.size()`).
          */
         explicit
         discrete_weights(std::vector<double> const& weights)
-            : _weights{weights}
         {
+            // Construct a complete binary tree in which the leaves contain
+            // the weights and internal nodes contain the sums of the weights
+            // of children.
+
+            // Determine the number of leaves.
+            std::size_t leaves = 1;
+
+            for (;;) {
+                if (leaves >= weights.size()) {
+                    break;
+                }
+                leaves *= 2;
+            }
+
+            // We store the binary tree as an array using the usual scheme:
+            //
+            //   root = 0 ,
+            //   parent(node) = (node - 1) / 2 .
+            //
+            _sumtree.resize(leaves * 2 - 1);
+            _leaves = leaves;
+            _events = weights.size();
+            DISTR_ASSERT(_leaves >= _events);
+
+            // Fill the leaves.
+            for (std::size_t i = 0; i < _events; i++) {
+                _sumtree[_leaves + i - 1] = weights[i];
+            }
+
+            // Then, fill internal nodes from leaves to the root. Recall
+            // that each node contains the sum of the weights of its
+            // children.
+            for (std::size_t layer = 1; ; layer++) {
+                auto const layer_size = leaves >> layer;
+                if (layer_size == 0) {
+                    break;
+                }
+
+                auto const start = layer_size - 1;
+                auto const end = start + layer_size;
+
+                DISTR_ASSERT(end < _leaves);
+                DISTR_ASSERT(start < end);
+
+                for (std::size_t node = start; node < end; node++) {
+                    auto const lchild = 2 * node + 1;
+                    auto const rchild = 2 * node + 2;
+                    _sumtree[node] = _sumtree[lchild] + _sumtree[rchild];
+                }
+            }
         }
 
 
@@ -338,77 +150,192 @@ namespace cxx
          *             numbers.
          */
         discrete_weights(std::initializer_list<double> const& weights)
-            : _weights{std::vector<double>(weights)}
+            : discrete_weights{std::vector<double>{weights}}
         {
         }
 
 
         /*
-         * Returns the sum of the weights. The time complexity of this
-         * function is constant.
+         * Returns the number of events.
          */
-        double
+        inline std::size_t
+        size() const noexcept
+        {
+            return _events;
+        }
+
+
+        /*
+         * Returns a pointer to the array containing weight values.
+         */
+        inline pointer
+        data() const noexcept
+        {
+            return _sumtree.data() + _leaves - 1;
+        }
+
+
+        /*
+         * Returns an iterator pointing to the beginning of the array
+         * containing weight values.
+         */
+        inline iterator
+        begin() const noexcept
+        {
+            return data();
+        }
+
+
+        /*
+         * Returns an iterator pointing to the past the end of the array
+         * containing weight values.
+         */
+        inline iterator
+        end() const noexcept
+        {
+            return data() + size();
+        }
+
+
+        /*
+         * Returns the weight of the i-th event.
+         */
+        inline double
+        operator[](std::size_t i) const
+        {
+            return *(data() + i);
+        }
+
+
+        /*
+         * Returns the sum of the weights.
+         *
+         * Time complexity:
+         *   O(1).
+         */
+        inline double
         sum() const
         {
-            return _weights.sum();
+            return _sumtree[0];
         }
 
 
         /*
-         * Returns a newly allocated vector containing weight values.
+         * Updates the weight of the i-th event.
+         *
+         * Behavior is undefined if `i` is out of range or `weight` is
+         * negative or not finite. It is also undefined that the sum of
+         * weights overflow due to the update.
+         *
+         * Params:
+         *   i      = Index of the event to update weight.
+         *   weight = New weight value.
+         *
+         * Time complexity:
+         *   O(log N) where N is the number of events.
          */
-        std::vector<double>
-        weights() const
+        void
+        update(std::size_t i, double weight)
         {
-            return std::vector<double>(
-                _weights.data(), _weights.data() + _weights.size()
-            );
+            DISTR_ASSERT(i < _events);
+            DISTR_ASSERT(weight >= 0);
+
+            auto node = _leaves + i - 1;
+            _sumtree[node] = weight;
+
+            do {
+                node = (node - 1) / 2;
+                auto const lchild = 2 * node + 1;
+                auto const rchild = 2 * node + 2;
+                _sumtree[node] = _sumtree[lchild] + _sumtree[rchild];
+            } while (node > 0);
         }
 
 
-        // Internal API.
-        distr_detail::weight_tree&
-        weight_tree() noexcept
+        /*
+         * Finds the event whose cumulative weight interval covers given probe
+         * value.
+         *
+         * Let `w[i]` be the weight of the i-th event, and let `s[i]` be the
+         * cumulative sum until the i-th event. That is,
+         *
+         *    s[0] = 0 ,
+         *    s[i] = w[0] + ... + w[i-1] .
+         *
+         * Then, this function finds the event i such that
+         *
+         *    s[i] <= probe < s[i+1] .
+         *
+         * Params:
+         *   probe = Probe weight used to find an event.
+         *
+         * Returns:
+         *   The index of the event found.
+         *
+         * Time complexity:
+         *   O(log N) where N is the number of events.
+         */
+        std::size_t
+        find(double probe) const
         {
-            return _weights;
+            std::size_t node = 0;
+
+            for (;;) {
+                auto const lchild = 2 * node + 1;
+                auto const rchild = 2 * node + 2;
+
+                if (lchild >= _sumtree.size()) {
+                    break;
+                }
+
+                if (probe < _sumtree[lchild]) {
+                    node = lchild;
+                } else {
+                    probe -= _sumtree[lchild];
+                    node = rchild;
+                }
+            }
+
+            DISTR_ASSERT(node >= _leaves - 1);
+            DISTR_ASSERT(node < _sumtree.size());
+            auto index = node - (_leaves - 1);
+
+            // Search may overshoot due to numerical errors.
+            if (index >= _events) {
+                index = _events - 1;
+            }
+
+            return index;
         }
-
-
-        // Internal API.
-        distr_detail::weight_tree const&
-        weight_tree() const noexcept
-        {
-            return _weights;
-        }
-
-
     private:
-        distr_detail::weight_tree _weights;
+        std::vector<double> _sumtree;
+        std::size_t _leaves = 0;
+        std::size_t _events = 0;
     };
 
 
     inline bool
-    operator==(
-        cxx::discrete_weights const& dw1, cxx::discrete_weights const& dw2
-    )
+    operator==(cxx::discrete_weights const& w1, cxx::discrete_weights const& w2)
     {
-        return dw1.weight_tree() == dw2.weight_tree();
+        if (w1.size() != w2.size()) {
+            return false;
+        }
+        return std::equal(w1.begin(), w1.end(), w2.begin());
     }
 
 
     inline bool
-    operator!=(
-        cxx::discrete_weights const& dw1, cxx::discrete_weights const& dw2
-    )
+    operator!=(cxx::discrete_weights const& w1, cxx::discrete_weights const& w2)
     {
-        return !(dw1 == dw2);
+        return !(w1 == w2);
     }
 
 
     template<typename Char, typename Tr>
     std::basic_istream<Char, Tr>&
     operator>>(
-        std::basic_istream<Char, Tr>& is, cxx::discrete_weights& dw
+        std::basic_istream<Char, Tr>& is,
+        cxx::discrete_weights& weights
     )
     {
         using sentry_type = typename std::basic_istream<Char, Tr>::sentry;
@@ -419,14 +346,14 @@ namespace cxx
                 return is;
             }
 
-            std::vector<double> weights(size);
-            for (std::size_t i = 0; i < size; i++) {
-                if (!(is >> weights[i])) {
+            std::vector<double> values(size);
+            for (auto& value : values) {
+                if (!(is >> value)) {
                     return is;
                 }
             }
 
-            dw = cxx::discrete_weights(weights);
+            weights = cxx::discrete_weights{values};
         }
 
         return is;
@@ -436,21 +363,20 @@ namespace cxx
     template<typename Char, typename Tr>
     std::basic_ostream<Char, Tr>&
     operator<<(
-        std::basic_ostream<Char, Tr>& os, cxx::discrete_weights const& dw
+        std::basic_ostream<Char, Tr>& os,
+        cxx::discrete_weights const& weights
     )
     {
         using sentry_type = typename std::basic_ostream<Char, Tr>::sentry;
 
         if (sentry_type sentry{os}) {
-            auto const& weights = dw.weight_tree();
-            auto const size = weights.size();
-            auto const values = weights.data();
+            os << weights.size();
 
-            os << size;
+            auto const sep = os.widen(' ');
 
-            for (std::size_t i = 0; i < size; i++) {
-                os << os.widen(' ');
-                os << values[i];
+            for (auto weight : weights) {
+                os << sep;
+                os << weight;
             }
         }
 
@@ -485,6 +411,9 @@ namespace cxx
         };
 
 
+        /*
+         * Default constructor creates an empty distribution.
+         */
         discrete_distribution() = default;
 
 
@@ -493,12 +422,12 @@ namespace cxx
          * where `N = weights.size()`.
          *
          * Params:
-         *   weights = Vector of weight values. The weights must be non-negative
-         *             finite numbers.
+         *   weights = Weight values. The weights must be non-negative finite
+         *             numbers.
          */
         explicit
         discrete_distribution(std::vector<double> const& weights)
-            : _param{weights}
+            : _weights{weights}
         {
         }
 
@@ -511,7 +440,7 @@ namespace cxx
          *             numbers.
          */
         discrete_distribution(std::initializer_list<double> const& weights)
-            : _param{weights}
+            : _weights{weights}
         {
         }
 
@@ -524,7 +453,7 @@ namespace cxx
          */
         explicit
         discrete_distribution(param_type const& param)
-            : _param{param}
+            : _weights{param}
         {
         }
 
@@ -539,22 +468,24 @@ namespace cxx
 
 
         /*
-         * Returns the parameter set of this distribution.
+         * Returns the parameter set of this distribution. It is convertible
+         * to `cxx::discrete_weights`.
          */
         param_type const&
         param() const noexcept
         {
-            return _param;
+            return _weights;
         }
 
 
         /*
-         * Reconfigures the distribution using given parameter set.
+         * Reconfigures the distribution using given parameter set. It is
+         * convertible from `cxx::discrete_weights`.
          */
         void
         param(param_type const& new_param)
         {
-            _param = new_param;
+            _weights = new_param;
         }
 
 
@@ -576,7 +507,7 @@ namespace cxx
         result_type
         max() const
         {
-            return _param.weight_tree().size() - 1;
+            return _weights.size() - 1;
         }
 
 
@@ -589,17 +520,7 @@ namespace cxx
         double
         sum() const
         {
-            return _param.sum();
-        }
-
-
-        /*
-         * Returns a newly allocated vector containing the weight values.
-         */
-        std::vector<double>
-        weights() const
-        {
-            return _param.weights();
+            return _weights.sum();
         }
 
 
@@ -617,7 +538,7 @@ namespace cxx
         void
         update(result_type i, double weight)
         {
-            return _param.weight_tree().update(i, weight);
+            return _weights.update(i, weight);
         }
 
 
@@ -634,14 +555,13 @@ namespace cxx
         result_type
         operator()(RNG& random) const
         {
-            auto const& weights = _param.weight_tree();
-            std::uniform_real_distribution<double> uniform{0.0, weights.sum()};
-            return weights.find(uniform(random));
+            std::uniform_real_distribution<double> uniform{0.0, _weights.sum()};
+            return _weights.find(uniform(random));
         }
 
 
     private:
-        param_type _param;
+        param_type _weights;
     };
 
 

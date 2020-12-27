@@ -13,25 +13,6 @@
 #include <discrete_distribution.hpp>
 
 
-TEST_CASE("discrete_distribution - is constructible from a vector")
-{
-    std::vector<double> weight_values = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0};
-    cxx::discrete_distribution distr{weight_values};
-
-    SECTION("attributes are correct")
-    {
-        auto const expected_sum = std::accumulate(
-            weight_values.begin(), weight_values.end(), 0.0
-        );
-
-        CHECK(distr.min() == 0);
-        CHECK(distr.max() == weight_values.size() - 1);
-        CHECK(distr.sum() == expected_sum);
-        CHECK(distr.weights() == weight_values);
-    }
-}
-
-
 TEST_CASE("discrete_distribution - generates values in correct probability")
 {
     std::vector<double> const weights = {1.0, 0.0, 2.0, 3.0, 4.0};
