@@ -1,8 +1,8 @@
 # Efficient discrete random distribution for C++
 
 [![Test Status][test-badge]][test-url]
+![C++11][cxx-badge]
 [![Boost License][license-badge]](LICENSE.txt)
-![C++11,14,17,20][cxx-badge]
 
 Header-only library providing `cxx::discrete_distribution` class for C++11
 and later. The class uses array-based sum tree to allow efficient sampling
@@ -14,7 +14,7 @@ and updates of discrete events, making it suitable for dynamic simulations like
 
 [test-badge]: https://github.com/snsinfu/cxx-distr/workflows/test/badge.svg
 [test-url]: https://github.com/snsinfu/cxx-distr/actions?query=workflow%3Atest
-[cxx-badge]: https://img.shields.io/badge/C%2B%2B-11%2F14%2F17%2F20-orange.svg
+[cxx-badge]: https://img.shields.io/badge/C%2B%2B-11-orange.svg
 [license-badge]: https://img.shields.io/badge/license-Boost-blue.svg
 
 - [Usage](#usage)
