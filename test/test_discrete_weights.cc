@@ -141,7 +141,7 @@ TEST_CASE("discrete_weights::update - updates weight value")
 }
 
 
-TEST_CASE("discrete_weights::find - finds the correct leaf")
+TEST_CASE("discrete_weights::find - finds the correct event")
 {
     // 0.0  1.0  2.0  3.0  4.0  5.0  6.0
     // |----|---------|--------------|
@@ -165,7 +165,7 @@ TEST_CASE("discrete_weights::find - finds the correct leaf")
 }
 
 
-TEST_CASE("discrete_weights::find - returns edge element for overshoot probe")
+TEST_CASE("discrete_weights::find - returns edge event for overshoot probe")
 {
     // Logically the probe should be in the half-open interval [0, S) where S
     // is the sum of weights. But in practice numerical errors can result in
@@ -179,7 +179,7 @@ TEST_CASE("discrete_weights::find - returns edge element for overshoot probe")
 }
 
 
-TEST_CASE("discrete_weights::find - finds the correct leaf after weight update")
+TEST_CASE("discrete_weights::find - finds the correct event after weight update")
 {
     // 0.0  1.0  2.0  3.0  4.0  5.0  6.0
     // |----|---------|--------------|
