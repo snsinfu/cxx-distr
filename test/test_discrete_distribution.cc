@@ -15,10 +15,13 @@
 
 TEST_CASE("discrete_distribution - generates values in correct probability")
 {
+    // Define event weights. Note the second event with zero weight.
     std::vector<double> const weights = {1.0, 0.0, 2.0, 3.0, 4.0};
     auto const weight_sum = std::accumulate(weights.begin(), weights.end(), 0.0);
 
-    cxx::discrete_distribution distr(weights);
+    // Sample from the discrete distribution and construct an empirical
+    // distribution (histogram).
+    cxx::discrete_distribution distr{weights};
 
     int const sample_count = 10000;
     std::mt19937_64 random;
@@ -34,6 +37,7 @@ TEST_CASE("discrete_distribution - generates values in correct probability")
         CHECK(histogram[i] == Approx(weights[i]).epsilon(0.1));
     }
 
-    // The distribution must not generate a value with zero weight.
+    // The distribution must not generate a value with zero weight. This
+    // property must be exact, not approximate.
     CHECK(histogram[1] == 0);
 }
