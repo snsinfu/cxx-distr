@@ -405,9 +405,19 @@ namespace cxx
         class param_type : public cxx::discrete_weights
         {
         public:
+
             using distribution_type = cxx::discrete_distribution;
 
+
+            // Inherit constructors from discrete_weights.
             using cxx::discrete_weights::discrete_weights;
+
+
+            // Allow conversion from discrete_weights.
+            param_type(cxx::discrete_weights const& weights)
+                : discrete_weights{weights}
+            {
+            }
         };
 
 
