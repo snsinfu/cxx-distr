@@ -4,10 +4,10 @@
 [![Boost License][license-badge]](LICENSE.txt)
 ![C++11,14,17,20][cxx-badge]
 
-Header-only library providing efficient `discrete_distribution` class for
-C++11 and later. The class uses sum tree to allow efficient updates of event
-weights, making it suitable for dynamic simulations like [Kinetic Monte
-Carlo][kmc] and [Gillespie algorithm][gillespie].
+Header-only library providing `cxx::discrete_distribution` class for C++11
+and later. The class uses array-based sum tree to allow efficient sampling
+and updates of discrete events, making it suitable for dynamic simulations like
+[Kinetic Monte Carlo][kmc] and [Gillespie algorithm][gillespie].
 
 [kmc]: https://en.wikipedia.org/wiki/Kinetic_Monte_Carlo
 [gillespie]: https://en.wikipedia.org/wiki/Gillespie_algorithm
