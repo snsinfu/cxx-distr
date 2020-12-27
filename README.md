@@ -17,7 +17,13 @@ algorithm][gillespie].
 [cxx-badge]: https://img.shields.io/badge/C%2B%2B-11%2F14%2F17%2F20-orange.svg
 [license-badge]: https://img.shields.io/badge/license-Boost-blue.svg
 
+- [Project Status](#project-status)
 - [License](#license)
+
+
+## Project Status
+
+Designing API.
 
 
 ## License
