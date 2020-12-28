@@ -33,12 +33,12 @@ library is single header-only and has zero dependency.
 
 int main()
 {
-    // Distribution of four events with these weights.
-    cxx::discrete_distribution distr = {1.2, 3.4, 5.6, 7.8};
+    // Distribution of four events (0, 1, 2 or 3) with given weights.
+    cxx::discrete_distribution<int> distr = {1.2, 3.4, 5.6, 7.8};
     std::mt19937_64 random;
 
     // 0, 1, 2 or 3 is chosen.
-    std::size_t choice = distr(random);
+    int choice = distr(random);
 
     // Change the weight of the event 1 to zero.
     distr.update(1, 0.0);

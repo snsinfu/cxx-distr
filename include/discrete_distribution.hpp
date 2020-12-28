@@ -389,6 +389,7 @@ namespace cxx
     /*
      * Distribution of random integers with given weights.
      */
+    template<typename T = int>
     class discrete_distribution
     {
     public:
@@ -396,7 +397,7 @@ namespace cxx
         /*
          * Type of generated integer.
          */
-        using result_type = std::size_t;
+        using result_type = T;
 
 
         /*
@@ -406,7 +407,7 @@ namespace cxx
         {
         public:
 
-            using distribution_type = cxx::discrete_distribution;
+            using distribution_type = cxx::discrete_distribution<T>;
 
 
             // Inherit constructors from discrete_weights.
@@ -517,7 +518,7 @@ namespace cxx
         result_type
         max() const
         {
-            return _weights.size() - 1;
+            return result_type(_weights.size() - 1);
         }
 
 
@@ -548,7 +549,7 @@ namespace cxx
         void
         update(result_type i, double weight)
         {
-            return _weights.update(i, weight);
+            return _weights.update(std::size_t(i), weight);
         }
 
 
@@ -566,7 +567,7 @@ namespace cxx
         operator()(RNG& random) const
         {
             std::uniform_real_distribution<double> uniform{0.0, _weights.sum()};
-            return _weights.find(uniform(random));
+            return result_type(_weights.find(uniform(random)));
         }
 
 
@@ -575,34 +576,36 @@ namespace cxx
     };
 
 
+    template<typename T>
     inline bool
     operator==(
-        cxx::discrete_distribution const& d1,
-        cxx::discrete_distribution const& d2
+        cxx::discrete_distribution<T> const& d1,
+        cxx::discrete_distribution<T> const& d2
     )
     {
         return d1.param() == d2.param();
     }
 
 
+    template<typename T>
     inline bool
     operator!=(
-        cxx::discrete_distribution const& d1,
-        cxx::discrete_distribution const& d2
+        cxx::discrete_distribution<T> const& d1,
+        cxx::discrete_distribution<T> const& d2
     )
     {
         return !(d1 == d2);
     }
 
 
-    template<typename Char, typename Tr>
+    template<typename Char, typename Tr, typename T>
     std::basic_istream<Char, Tr>&
     operator>>(
         std::basic_istream<Char, Tr>& is,
-        cxx::discrete_distribution& distr
+        cxx::discrete_distribution<T>& distr
     )
     {
-        using param_type = cxx::discrete_distribution::param_type;
+        using param_type = typename cxx::discrete_distribution<T>::param_type;
         param_type param;
         is >> param;
         distr.param(param);
@@ -610,11 +613,11 @@ namespace cxx
     }
 
 
-    template<typename Char, typename Tr>
+    template<typename Char, typename Tr, typename T>
     std::basic_ostream<Char, Tr>&
     operator<<(
         std::basic_ostream<Char, Tr>& os,
-        cxx::discrete_distribution const& distr
+        cxx::discrete_distribution<T> const& distr
     )
     {
         return os << distr.param();
