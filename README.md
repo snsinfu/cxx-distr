@@ -72,7 +72,7 @@ make -C random_network
 
 ## Project Status
 
-Designing API.
+Basic features are done.
 
 
 ## License
