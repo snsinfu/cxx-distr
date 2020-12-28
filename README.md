@@ -66,6 +66,7 @@ Also you can test example program:
 ```sh
 cd cxx-distr/example
 make -C gillespie
+make -C random_network
 ```
 
 

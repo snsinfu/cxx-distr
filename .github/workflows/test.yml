@@ -9,3 +9,4 @@ jobs:
       - uses: actions/checkout@v2
       - run: make -j2 -C test
       - run: make -C example/gillespie
+      - run: make -C example/random_network
