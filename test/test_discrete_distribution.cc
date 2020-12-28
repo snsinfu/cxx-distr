@@ -15,7 +15,7 @@
 
 TEST_CASE("discrete_distribution - is default constructible")
 {
-    cxx::discrete_distribution distr;
+    cxx::discrete_distribution<int> distr;
     (void) distr;
 }
 
@@ -24,27 +24,27 @@ TEST_CASE("discrete_distribution - is constructible from weights")
 {
     // Vector
     std::vector<double> const values = {1.0, 2.0, 3.0};
-    cxx::discrete_distribution distr_v{values};
+    cxx::discrete_distribution<int> distr_v{values};
     (void) distr_v;
 
     // Initializer list
-    cxx::discrete_distribution distr_i = {1.0, 2.0, 3.0};
+    cxx::discrete_distribution<int> distr_i = {1.0, 2.0, 3.0};
     (void) distr_i;
 
     // Weights
     cxx::discrete_weights weights = {1.0, 2.0, 3.0};
-    cxx::discrete_distribution distr_w{weights};
+    cxx::discrete_distribution<int> distr_w{weights};
     (void) distr_w;
 }
 
 
 TEST_CASE("discrete_distribution - is equality comparable")
 {
-    cxx::discrete_distribution const distr_A = {1.2, 3.4, 5.6};
-    cxx::discrete_distribution const distr_B = {1.2, 3.4, 5.6};
-    cxx::discrete_distribution const distr_C = {5.6, 3.4, 1.2};
-    cxx::discrete_distribution const distr_D = {1.2, 3.4, 5.6, 7.8};
-    cxx::discrete_distribution const distr_E = {1.2, 3.4};
+    cxx::discrete_distribution<int> const distr_A = {1.2, 3.4, 5.6};
+    cxx::discrete_distribution<int> const distr_B = {1.2, 3.4, 5.6};
+    cxx::discrete_distribution<int> const distr_C = {5.6, 3.4, 1.2};
+    cxx::discrete_distribution<int> const distr_D = {1.2, 3.4, 5.6, 7.8};
+    cxx::discrete_distribution<int> const distr_E = {1.2, 3.4};
 
     CHECK(distr_A == distr_A);
     CHECK(distr_A == distr_B);
@@ -56,9 +56,9 @@ TEST_CASE("discrete_distribution - is equality comparable")
 
 TEST_CASE("discrete_distribution - is copyable")
 {
-    cxx::discrete_distribution origin = {1.0, 2.0, 3.0};
-    cxx::discrete_distribution clone = origin;
-    cxx::discrete_distribution distr;
+    cxx::discrete_distribution<int> origin = {1.0, 2.0, 3.0};
+    cxx::discrete_distribution<int> clone = origin;
+    cxx::discrete_distribution<int> distr;
 
     distr = origin;
 
@@ -70,15 +70,15 @@ TEST_CASE("discrete_distribution - is copyable")
 TEST_CASE("discrete_distribution::reset - is defined")
 {
     // Just a RandomNumberDistribution requirement.
-    cxx::discrete_distribution distr;
+    cxx::discrete_distribution<int> distr;
     distr.reset();
 }
 
 
 TEST_CASE("discrete_distribution::param - roundtrip works")
 {
-    cxx::discrete_distribution const origin = {1.2, 3.4, 5.6};
-    cxx::discrete_distribution distr;
+    cxx::discrete_distribution<int> const origin = {1.2, 3.4, 5.6};
+    cxx::discrete_distribution<int> distr;
 
     distr.param(origin.param());
 
@@ -89,7 +89,7 @@ TEST_CASE("discrete_distribution::param - roundtrip works")
 TEST_CASE("discrete_distribution::param - is-a discrete_weights")
 {
     cxx::discrete_weights const expected_weights = {1.2, 3.4, 5.6};
-    cxx::discrete_distribution const distr{expected_weights};
+    cxx::discrete_distribution<int> const distr{expected_weights};
 
     cxx::discrete_weights const& weights = distr.param();
     CHECK(weights == expected_weights);
@@ -98,15 +98,15 @@ TEST_CASE("discrete_distribution::param - is-a discrete_weights")
 
 TEST_CASE("discrete_distribution::min/max - returns correct bounds")
 {
-    cxx::discrete_distribution const distr1 = {1.0};
+    cxx::discrete_distribution<int> const distr1 = {1.0};
     CHECK(distr1.min() == 0);
     CHECK(distr1.max() == 0);
 
-    cxx::discrete_distribution const distr2 = {1.0, 2.0};
+    cxx::discrete_distribution<int> const distr2 = {1.0, 2.0};
     CHECK(distr2.min() == 0);
     CHECK(distr2.max() == 1);
 
-    cxx::discrete_distribution const distr3 = {1.0, 2.0, 3.0};
+    cxx::discrete_distribution<int> const distr3 = {1.0, 2.0, 3.0};
     CHECK(distr3.min() == 0);
     CHECK(distr3.max() == 2);
 }
@@ -114,14 +114,14 @@ TEST_CASE("discrete_distribution::min/max - returns correct bounds")
 
 TEST_CASE("discrete_distribution::sum - returns correct weight sum")
 {
-    cxx::discrete_distribution const distr = {1.2, 3.4, 5.6};
+    cxx::discrete_distribution<int> const distr = {1.2, 3.4, 5.6};
     CHECK(distr.sum() == Approx(1.2 + 3.4 + 5.6));
 }
 
 
 TEST_CASE("discrete_distribution::update - updates weight value")
 {
-    cxx::discrete_distribution distr = {1.2, 3.4, 5.6};
+    cxx::discrete_distribution<int> distr = {1.2, 3.4, 5.6};
 
     auto const& weights = distr.param();
     REQUIRE(weights[0] == 1.2);
@@ -145,7 +145,7 @@ TEST_CASE("discrete_distribution - generates values in correct probability")
 
     // Sample from the discrete distribution and construct an empirical
     // distribution (histogram).
-    cxx::discrete_distribution distr{weights};
+    cxx::discrete_distribution<std::size_t> distr{weights};
 
     int const sample_count = 10000;
     std::mt19937_64 random;
@@ -169,7 +169,7 @@ TEST_CASE("discrete_distribution - generates values in correct probability")
 
 TEST_CASE("discrete_distribution - changes distribution on the fly")
 {
-    cxx::discrete_distribution distr = {1.0, 0.0};
+    cxx::discrete_distribution<int> distr = {1.0, 0.0};
     std::mt19937_64 random;
 
     // Now the distribution is {1, 0}, so only the first event occurs.

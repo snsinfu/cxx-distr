@@ -35,7 +35,7 @@ int main()
     // Discrete distribution of N reactions. We will update the rates
     // (weights) based on the number of species.
     std::vector<double> const initial_rate(num_species, 0.0);
-    cxx::discrete_distribution reaction_distr{initial_rate};
+    cxx::discrete_distribution<std::size_t> reaction_distr{initial_rate};
 
     // Simulation state.
     std::vector<int> species(num_species);
